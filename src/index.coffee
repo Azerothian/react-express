@@ -5,7 +5,7 @@ parseurl = require "parseurl"
 paths = require "path"
 glob = require "glob"
 browserify = require "browserify"
-literalify = require "literalify"
+#literalify = require "literalify"
 Promise = require "bluebird"
 
 {html, head,body,div, script, title, link} = React.DOM
