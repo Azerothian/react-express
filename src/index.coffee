@@ -43,6 +43,7 @@ class ReactExpress
       #  relative = relative.replace(/\\/g, '/');
 
       ext = paths.extname(relative)
+
       relative = relative.replace(ext, "")
       debug "relate", relative,
       #if relative.indexOf("\\") > -1
@@ -57,16 +58,33 @@ class ReactExpress
         fullPath: path,
         ext: ext
       }
+
       globPath = ".#{relative}.*"
       debug "globPath", globPath, @rootPath
-      glob globPath, {cwd: @rootPath}, (err, files) ->
+      glob globPath, {cwd: @rootPath}, (err, files) =>
         if err?
           debug "glob err", err
-
+        pathInfo.files = files
         debug "files found #{files.length}", files
         if files.length > 0
-          pathInfo.files = files
+          check = false
+
+          if @browserify.extensions?
+            for file in files
+              ex = paths.extname(file)
+              for e in @browserify.extensions
+                debug " ex vs e ", ex, e ,ex is e
+                if ex is e
+                  check = true
+                  break
+              if check
+                break
+            if !check
+              debug "invalid extension"
+              return reject();
           return resolve(pathInfo)
+
+
         reject()
 
   renderCheck: (pathInfo, req, res) =>
@@ -129,8 +147,14 @@ class ReactExpress
 
       #script { src:"//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.js", type:"text/javascript" }
       #cls.getHeadTags() if cls.getHeadTags?
-      debug "render component html"
-      compHtml = React.renderComponentToString cls({})
+      #debug "render component html"
+      try
+        debug "creating component"
+        component =  cls({})
+        debug "render component html", component
+        compHtml = React.renderComponentToString component
+      catch e
+        debug "err", e
       debug "create components"
       components = html {},
         head {}#,

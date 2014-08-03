@@ -76,12 +76,36 @@
           return glob(globPath, {
             cwd: _this.rootPath
           }, function(err, files) {
+            var check, e, ex, file, _i, _j, _len, _len1, _ref1;
             if (err != null) {
               debug("glob err", err);
             }
+            pathInfo.files = files;
             debug("files found " + files.length, files);
             if (files.length > 0) {
-              pathInfo.files = files;
+              check = false;
+              if (_this.browserify.extensions != null) {
+                for (_i = 0, _len = files.length; _i < _len; _i++) {
+                  file = files[_i];
+                  ex = paths.extname(file);
+                  _ref1 = _this.browserify.extensions;
+                  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+                    e = _ref1[_j];
+                    debug(" ex vs e ", ex, e, ex === e);
+                    if (ex === e) {
+                      check = true;
+                      break;
+                    }
+                  }
+                  if (check) {
+                    break;
+                  }
+                }
+                if (!check) {
+                  debug("invalid extension");
+                  return reject();
+                }
+              }
               return resolve(pathInfo);
             }
             return reject();
@@ -129,7 +153,7 @@
     ReactExpress.prototype.renderHtml = function(pathInfo, req, res) {
       return new Promise((function(_this) {
         return function(resolve, reject) {
-          var cls, compHtml, components, filePath, links, scripts, startupScript, str;
+          var cls, compHtml, component, components, e, filePath, links, scripts, startupScript, str;
           debug("render html");
           res.setHeader('Content-Type', 'text/html');
           filePath = paths.normalize(pathInfo.fullPath);
@@ -161,8 +185,15 @@
             }));
           }
           startupScript = "var app = require('app'), React = require('react'); var container = document.getElementById('react-component'); React.renderComponent(app({}), container);";
-          debug("render component html");
-          compHtml = React.renderComponentToString(cls({}));
+          try {
+            debug("creating component");
+            component = cls({});
+            debug("render component html", component);
+            compHtml = React.renderComponentToString(component);
+          } catch (_error) {
+            e = _error;
+            debug("err", e);
+          }
           debug("create components");
           components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, links, body({}, div({
             id: "react-component",
