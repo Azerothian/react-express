@@ -1,5 +1,5 @@
 (function() {
-  var Promise, React, ReactExpress, body, browserify, debug, div, glob, head, html, literalify, parseurl, paths, script, title, url, _ref,
+  var Promise, React, ReactExpress, body, browserify, debug, div, glob, head, html, link, literalify, parseurl, paths, script, title, url, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   React = require("react");
@@ -20,7 +20,7 @@
 
   Promise = require("bluebird");
 
-  _ref = React.DOM, html = _ref.html, head = _ref.head, body = _ref.body, div = _ref.div, script = _ref.script, title = _ref.title;
+  _ref = React.DOM, html = _ref.html, head = _ref.head, body = _ref.body, div = _ref.div, script = _ref.script, title = _ref.title, link = _ref.link;
 
   ReactExpress = (function() {
     function ReactExpress(browserify) {
@@ -131,7 +131,7 @@
     ReactExpress.prototype.renderHtml = function(pathInfo, req, res) {
       return new Promise((function(_this) {
         return function(resolve, reject) {
-          var cls, compHtml, components, filePath, scripts, startupScript, str;
+          var cls, compHtml, components, filePath, links, scripts, startupScript, str;
           debug("render html");
           res.setHeader('Content-Type', 'text/html');
           filePath = paths.normalize(pathInfo.fullPath);
@@ -143,20 +143,30 @@
               type: "text/javascript"
             })
           ];
+          links = [];
           debug("cls.getScripts?");
           if (cls.getScripts != null) {
-            scripts = cls.getScripts().map(function(s) {
+            scripts = scripts.concat(cls.getScripts().map(function(s) {
               return script({
                 src: s,
                 type: "text/javascript"
               });
-            });
+            }));
+          }
+          if (cls.getCSS != null) {
+            links = links.concat(cls.getCSS().map(function(c) {
+              return link({
+                href: c,
+                rel: "stylesheet",
+                type: "text/css"
+              });
+            }));
           }
           startupScript = "var app = require('app'), React = require('react'); var container = document.getElementById('react-component'); React.renderComponent(app({}), container);";
           debug("render component html");
           compHtml = React.renderComponentToString(cls({}));
           debug("create components");
-          components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, body({}, div({
+          components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, links, body({}, div({
             id: "react-component",
             dangerouslySetInnerHTML: {
               "__html": compHtml

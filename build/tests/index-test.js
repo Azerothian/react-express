@@ -32,42 +32,53 @@
       app.listen(port);
       return done();
     });
-    it('Express Test JSX JS', function() {
-      return request(host).get('/jsx/index.js').end(function(err, res) {
-        expect(res.text).to.not.equal("");
-        return debug("done", res.text);
-      });
-    });
-    it('Express Test JSX', function() {
+    return it('Express Test JSX', function() {
       return request(host).get('/jsx/index?name=Neo').end(function(err, res) {
         expect(res.text).to.not.equal("");
         return debug("done", res.text);
       });
     });
-    it('Express Test Coffee', function() {
-      return request(host).get('/coffee/index').end(function(err, res) {
-        expect(res.text).to.not.equal("");
-        return debug("done", res.text);
-      });
-    });
-    it('Express Test 3', function() {
-      return request(host).get('/index.js').end(function(err, res) {
-        expect(res.text).to.not.equal("");
-        return debug("done", res.text);
-      });
-    });
-    it('Express Test Folder Constraint', function() {
-      return request(host).get('/../outside/test').end(function(err, res) {
-        expect(res.status).to.equal(404);
-        return debug("done", res.text);
-      });
-    });
-    return it('Express Test 2', function() {
-      return request(host).get('/').end(function(err, res) {
-        expect(res.text).to.not.equal("");
-        return debug("done", res.text);
-      });
-    });
   });
+
+
+  /*
+    it 'Express Test JSX JS', () ->
+      request(host)
+        .get('/jsx/index.js')
+        .end (err, res) ->
+          expect(res.text).to.not.equal("")
+          debug "done", res.text
+  
+  
+  
+  
+    it 'Express Test Coffee', () ->
+      request(host)
+        .get('/coffee/index')
+        .end (err, res) ->
+          expect(res.text).to.not.equal("")
+          debug "done", res.text
+  
+  
+    it 'Express Test 3', () ->
+      request(host)
+        .get('/index.js')
+        .end (err, res) ->
+          expect(res.text).to.not.equal("")
+          debug "done", res.text
+    it 'Express Test Folder Constraint', () ->
+      request(host)
+        .get('/../outside/test')
+        .end (err, res) ->
+          expect(res.status).to.equal(404)
+          debug "done", res.text
+  
+    it 'Express Test 2', () ->
+      request(host)
+        .get('/')
+        .end (err, res) ->
+          expect(res.text).to.not.equal("")
+          debug "done", res.text
+   */
 
 }).call(this);

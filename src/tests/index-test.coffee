@@ -20,8 +20,13 @@ describe 'Middle ware test', () ->
     }
     app.listen(port)
     done()
-
-
+  it 'Express Test JSX', () ->
+    request(host)
+      .get('/jsx/index?name=Neo')
+      .end (err, res) ->
+        expect(res.text).to.not.equal("")
+        debug "done", res.text
+###
   it 'Express Test JSX JS', () ->
     request(host)
       .get('/jsx/index.js')
@@ -30,12 +35,7 @@ describe 'Middle ware test', () ->
         debug "done", res.text
 
 
-  it 'Express Test JSX', () ->
-    request(host)
-      .get('/jsx/index?name=Neo')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
+
 
   it 'Express Test Coffee', () ->
     request(host)
@@ -64,3 +64,4 @@ describe 'Middle ware test', () ->
       .end (err, res) ->
         expect(res.text).to.not.equal("")
         debug "done", res.text
+###

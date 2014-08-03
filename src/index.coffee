@@ -8,7 +8,7 @@ browserify = require "browserify"
 literalify = require "literalify"
 Promise = require "bluebird"
 
-{html, head,body,div, script, title} = React.DOM
+{html, head,body,div, script, title, link} = React.DOM
 
 #todo
 #cache in session, html files based on get string
@@ -113,10 +113,14 @@ class ReactExpress
         script { src: "#{pathInfo.relative}.js", type: "text/javascript" }
         #script { src: "/app.js", type: "text/javascript" }
       ]
+      links = []
       debug "cls.getScripts?"
       if cls.getScripts?
-        scripts = cls.getScripts().map (s) ->
+        scripts = scripts.concat cls.getScripts().map (s) ->
           return script { src: s, type: "text/javascript" }
+      if cls.getCSS?
+        links = links.concat cls.getCSS().map (c) ->
+          return link {href: c, rel:"stylesheet", type:"text/css" }
 
 
       startupScript = "var app = require('app'), React = require('react');
@@ -131,6 +135,7 @@ class ReactExpress
       components = html {},
         head {}#,
           title {}, cls.getTitle() if cls.getTitle?
+          links
         body {},
           div {
             id: "react-component",
