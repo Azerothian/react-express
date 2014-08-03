@@ -1,0 +1,6 @@
+{
+  "name": "react-express",
+  "version": "0.0.0",
+  "browserify": { "transform": [ "reactify", "coffeeify" ] }
+
+}

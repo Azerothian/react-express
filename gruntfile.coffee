@@ -2,6 +2,7 @@ module.exports = (grunt) ->
 
   copyTargets = [
     { expand: true, cwd: 'src', src: ['**', '!**/*.coffee'], dest: 'build' }
+    { expand: true, cwd: 'src/tests/react/coffee', src: ['**'], dest: 'build/tests/react/coffee' }
   ]
 
   grunt.initConfig
@@ -12,6 +13,8 @@ module.exports = (grunt) ->
     clean:
       build:
         [ 'build' ]
+      tests:
+        [ 'build/tests/react/coffee/index.js']
     coffee:
       lib:
         files: [
@@ -58,6 +61,7 @@ module.exports = (grunt) ->
     'clean:build',
     'coffee',
     'copy',
+    'clean:tests'
     'notify:complete'
   ]
 # grunt build && node-debug node_modules\mocha\bin\_mocha build\tests\element-test.js
