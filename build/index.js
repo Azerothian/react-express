@@ -1,5 +1,5 @@
 (function() {
-  var Promise, React, ReactExpress, body, browserify, debug, div, glob, head, html, link, literalify, parseurl, paths, script, title, url, _ref,
+  var Promise, React, ReactExpress, body, browserify, debug, div, glob, head, html, link, parseurl, paths, script, title, url, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   React = require("react");
@@ -15,8 +15,6 @@
   glob = require("glob");
 
   browserify = require("browserify");
-
-  literalify = require("literalify");
 
   Promise = require("bluebird");
 
