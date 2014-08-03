@@ -5,6 +5,9 @@ Express Middleware to render react components
 
 Use at your own risk, is pretty alpha atm a bit of optimising needs to happen
 
+## Todo App
+https://github.com/Azerothian/react-todo-express
+
 ## Install
 ```
 npm install express react-express --save
