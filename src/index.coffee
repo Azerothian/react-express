@@ -5,8 +5,11 @@ parseurl = require "parseurl"
 paths = require "path"
 glob = require "glob"
 browserify = require "browserify"
-#literalify = require "literalify"
 Promise = require "bluebird"
+serveStatic = require "serve-static"
+mkpath = require "mkpath"
+fs = require "fs"
+rimraf = require "rimraf"
 
 {html, head,body,div, script, title, link} = React.DOM
 
@@ -17,15 +20,26 @@ Promise = require "bluebird"
 #show 500 error message for when rendercheck fails
 class ReactExpress
 
-  constructor: (@browserify) ->
-    @rootPath = paths.join process.cwd(), @browserify.basedir
+  constructor: (@options = {}) ->
+    if !@options.version?
+      @options.version = "0.11.1"
+    if !@options.cachedir?
+      @options.cachedir = "react-cache"
+    @rootPath = paths.join process.cwd(), @options.basedir
+    @cacheDir = paths.join process.cwd(), @options.cachedir
+    debug "@cacheDir", @cacheDir
+    @staticCache = serveStatic(@cacheDir)
+    rimraf @cacheDir, () ->
+
+
 
   express: (req, res, next) =>
     return next() if 'GET' != req.method && 'HEAD' != req.method
     @processPath(req, res).then (pathInfo) =>
       debug "starting rendercheck", pathInfo
-      @renderCheck(pathInfo, req, res).then () ->
-        debug "finished"
+      @renderCheck(pathInfo, req, res).then () =>
+        debug "finished executing static cache"
+        @staticCache(req,res,next)
         #nowhere
       , () ->
         debug "rendercheck failed"
@@ -69,10 +83,10 @@ class ReactExpress
         if files.length > 0
           check = false
 
-          if @browserify.extensions?
+          if @options.extensions?
             for file in files
               ex = paths.extname(file)
-              for e in @browserify.extensions
+              for e in @options.extensions
                 debug " ex vs e ", ex, e ,ex is e
                 if ex is e
                   check = true
@@ -99,27 +113,59 @@ class ReactExpress
   renderJs: (pathInfo, req, res) =>
     return new Promise (resolve, reject) =>
       debug "renderJs"
-      res.setHeader('Content-Type', 'text/javascript')
       basePath = ".#{pathInfo.relative}"
-      debug "basePath", basePath
-      bopts = {}
-      for opts of @browserify
-        bopts[opts] = @browserify[opts]
-      bopts.basedir = @rootPath
+      cacheFilePath = paths.join(@cacheDir, basePath)+ ".js"
+      fs.exists cacheFilePath, (exists) =>
+        if(exists)
+          debug "js file exists, no need to render"
+          return resolve()
 
-      debug "start browserify", bopts
-      b = browserify(bopts)
-        # dont know why this does not work?
-        # i put it before n after require still dont work
-        # .transform(literalify.configure({"react": 'window.React'}))
-        .require(basePath, { expose: "app" })
-        .require("react")
-        .bundle()
-        .pipe(res)
-      debug "done?"
+        cacheFileDir = paths.dirname(cacheFilePath)
 
-  renderHtml: (pathInfo, req, res) =>
-    return new Promise (resolve, reject) =>
+
+        res.setHeader('Content-Type', 'text/javascript')
+
+        debug "basePath", basePath
+        bopts = {}
+        for opts of @options
+          if opts != "version" && opts != "cache"
+            bopts[opts] = @options[opts]
+        bopts.basedir = @rootPath
+
+        debug "start browserify", bopts
+
+        globalShim = require('browserify-global-shim').configure {
+          'react': 'React || React'
+        }
+
+        b = browserify(bopts)
+          # dont know why this does not work?
+          # i put it before n after require still dont work
+          #.transform(literalify.configure({"react": 'window.React'}))
+
+
+        debug "creating dir", cacheFileDir
+        mkpath cacheFileDir, (err) ->
+          debug "cachePath", cacheFilePath
+          b.transform(globalShim, {global: true})
+          b.external("react")
+          b.require(basePath, { expose: "app" })
+
+
+          strm = b.bundle()
+
+          write = fs.createWriteStream(cacheFilePath)
+
+          strm.pipe(write)
+
+          write.on "close", () ->
+            debug "fin"
+            resolve()
+          #return resolve()
+
+
+  renderHtml: (pathInfo, req, res) ->
+    return new Promise (resolve, reject) ->
       debug "render html"
       res.setHeader('Content-Type', 'text/html')
 
@@ -141,11 +187,15 @@ class ReactExpress
           return link {href: c, rel:"stylesheet", type:"text/css" }
 
 
-      startupScript = "var app = require('app'), React = require('react');
+      startupScript = "var app = require('app');
+      var r = React;
+      if(!r) {
+        r = require('react');
+      }
       var container = document.getElementById('react-component');
-      React.renderComponent(app({}), container);"
+      r.renderComponent(app({}), container);"
 
-      #script { src:"//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.js", type:"text/javascript" }
+
       #cls.getHeadTags() if cls.getHeadTags?
       #debug "render component html"
       try
@@ -159,6 +209,7 @@ class ReactExpress
       components = html {},
         head {}#,
           title {}, cls.getTitle() if cls.getTitle?
+          script { src:"//cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js", type:"text/javascript" }
           links
         body {},
           div {

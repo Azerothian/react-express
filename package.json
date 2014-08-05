@@ -15,8 +15,6 @@
   "bugs": {
     "url": "https://github.com/Azerothian/react-express/issues"
   },
-  "browserify": { "transform": [ "reactify", "coffeeify" ] },
-
   "homepage": "https://github.com/Azerothian/react-express",
   "devDependencies": {
     "chai": "^1.9.1",
@@ -32,15 +30,18 @@
     "node-jsx": "~0.11.0",
     "coffee-script": "~1.7.1",
     "reactify": "~0.14.0",
-    "coffeeify": "~0.7.0",
-    "grunt-remove": "~0.1.0"
+    "coffeeify": "~0.7.0"
   },
   "dependencies": {
+    "bluebird": "~2.2.2",
+    "browserify": "^5.9.1",
+    "browserify-global-shim": "^1.0.0",
     "debug": "~1.0.4",
-    "react": "~0.11.1",
-    "parseurl": "~1.2.0",
     "glob": "~4.0.5",
-    "browserify": "~5.9.1",
-    "bluebird": "~2.2.2"
+    "mkpath": "^0.1.0",
+    "parseurl": "~1.2.0",
+    "react": "~0.11.1",
+    "rimraf": "^2.2.8",
+    "serve-static": "^1.4.4"
   }
 }

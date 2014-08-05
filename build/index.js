@@ -1,5 +1,5 @@
 (function() {
-  var Promise, React, ReactExpress, body, browserify, debug, div, glob, head, html, link, parseurl, paths, script, title, url, _ref,
+  var Promise, React, ReactExpress, body, browserify, debug, div, fs, glob, head, html, link, mkpath, parseurl, paths, rimraf, script, serveStatic, title, url, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   React = require("react");
@@ -18,17 +18,34 @@
 
   Promise = require("bluebird");
 
+  serveStatic = require("serve-static");
+
+  mkpath = require("mkpath");
+
+  fs = require("fs");
+
+  rimraf = require("rimraf");
+
   _ref = React.DOM, html = _ref.html, head = _ref.head, body = _ref.body, div = _ref.div, script = _ref.script, title = _ref.title, link = _ref.link;
 
   ReactExpress = (function() {
-    function ReactExpress(browserify) {
-      this.browserify = browserify;
-      this.renderHtml = __bind(this.renderHtml, this);
+    function ReactExpress(options) {
+      this.options = options != null ? options : {};
       this.renderJs = __bind(this.renderJs, this);
       this.renderCheck = __bind(this.renderCheck, this);
       this.processPath = __bind(this.processPath, this);
       this.express = __bind(this.express, this);
-      this.rootPath = paths.join(process.cwd(), this.browserify.basedir);
+      if (this.options.version == null) {
+        this.options.version = "0.11.1";
+      }
+      if (this.options.cachedir == null) {
+        this.options.cachedir = "react-cache";
+      }
+      this.rootPath = paths.join(process.cwd(), this.options.basedir);
+      this.cacheDir = paths.join(process.cwd(), this.options.cachedir);
+      debug("@cacheDir", this.cacheDir);
+      this.staticCache = serveStatic(this.cacheDir);
+      rimraf(this.cacheDir, function() {});
     }
 
     ReactExpress.prototype.express = function(req, res, next) {
@@ -39,7 +56,8 @@
         return function(pathInfo) {
           debug("starting rendercheck", pathInfo);
           return _this.renderCheck(pathInfo, req, res).then(function() {
-            return debug("finished");
+            debug("finished executing static cache");
+            return _this.staticCache(req, res, next);
           }, function() {
             debug("rendercheck failed");
             return next();
@@ -84,11 +102,11 @@
             debug("files found " + files.length, files);
             if (files.length > 0) {
               check = false;
-              if (_this.browserify.extensions != null) {
+              if (_this.options.extensions != null) {
                 for (_i = 0, _len = files.length; _i < _len; _i++) {
                   file = files[_i];
                   ex = paths.extname(file);
-                  _ref1 = _this.browserify.extensions;
+                  _ref1 = _this.options.extensions;
                   for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
                     e = _ref1[_j];
                     debug(" ex vs e ", ex, e, ex === e);
@@ -131,87 +149,118 @@
     ReactExpress.prototype.renderJs = function(pathInfo, req, res) {
       return new Promise((function(_this) {
         return function(resolve, reject) {
-          var b, basePath, bopts, opts;
+          var basePath, cacheFilePath;
           debug("renderJs");
-          res.setHeader('Content-Type', 'text/javascript');
           basePath = "." + pathInfo.relative;
-          debug("basePath", basePath);
-          bopts = {};
-          for (opts in _this.browserify) {
-            bopts[opts] = _this.browserify[opts];
-          }
-          bopts.basedir = _this.rootPath;
-          debug("start browserify", bopts);
-          b = browserify(bopts).require(basePath, {
-            expose: "app"
-          }).require("react").bundle().pipe(res);
-          return debug("done?");
+          cacheFilePath = paths.join(_this.cacheDir, basePath) + ".js";
+          return fs.exists(cacheFilePath, function(exists) {
+            var b, bopts, cacheFileDir, globalShim, opts;
+            if (exists) {
+              debug("js file exists, no need to render");
+              return resolve();
+            }
+            cacheFileDir = paths.dirname(cacheFilePath);
+            res.setHeader('Content-Type', 'text/javascript');
+            debug("basePath", basePath);
+            bopts = {};
+            for (opts in _this.options) {
+              if (opts !== "version" && opts !== "cache") {
+                bopts[opts] = _this.options[opts];
+              }
+            }
+            bopts.basedir = _this.rootPath;
+            debug("start browserify", bopts);
+            globalShim = require('browserify-global-shim').configure({
+              'react': 'React || React'
+            });
+            b = browserify(bopts);
+            debug("creating dir", cacheFileDir);
+            return mkpath(cacheFileDir, function(err) {
+              var strm, write;
+              debug("cachePath", cacheFilePath);
+              b.transform(globalShim, {
+                global: true
+              });
+              b.external("react");
+              b.require(basePath, {
+                expose: "app"
+              });
+              strm = b.bundle();
+              write = fs.createWriteStream(cacheFilePath);
+              strm.pipe(write);
+              return write.on("close", function() {
+                debug("fin");
+                return resolve();
+              });
+            });
+          });
         };
       })(this));
     };
 
     ReactExpress.prototype.renderHtml = function(pathInfo, req, res) {
-      return new Promise((function(_this) {
-        return function(resolve, reject) {
-          var cls, compHtml, component, components, e, filePath, links, scripts, startupScript, str;
-          debug("render html");
-          res.setHeader('Content-Type', 'text/html');
-          filePath = paths.normalize(pathInfo.fullPath);
-          debug("require check for scripts?", filePath);
-          cls = require(filePath);
-          scripts = [
-            script({
-              src: "" + pathInfo.relative + ".js",
+      return new Promise(function(resolve, reject) {
+        var cls, compHtml, component, components, e, filePath, links, scripts, startupScript, str;
+        debug("render html");
+        res.setHeader('Content-Type', 'text/html');
+        filePath = paths.normalize(pathInfo.fullPath);
+        debug("require check for scripts?", filePath);
+        cls = require(filePath);
+        scripts = [
+          script({
+            src: "" + pathInfo.relative + ".js",
+            type: "text/javascript"
+          })
+        ];
+        links = [];
+        debug("cls.getScripts?");
+        if (cls.getScripts != null) {
+          scripts = scripts.concat(cls.getScripts().map(function(s) {
+            return script({
+              src: s,
               type: "text/javascript"
-            })
-          ];
-          links = [];
-          debug("cls.getScripts?");
-          if (cls.getScripts != null) {
-            scripts = scripts.concat(cls.getScripts().map(function(s) {
-              return script({
-                src: s,
-                type: "text/javascript"
-              });
-            }));
+            });
+          }));
+        }
+        if (cls.getCSS != null) {
+          links = links.concat(cls.getCSS().map(function(c) {
+            return link({
+              href: c,
+              rel: "stylesheet",
+              type: "text/css"
+            });
+          }));
+        }
+        startupScript = "var app = require('app'); var r = React; if(!r) { r = require('react'); } var container = document.getElementById('react-component'); r.renderComponent(app({}), container);";
+        try {
+          debug("creating component");
+          component = cls({});
+          debug("render component html", component);
+          compHtml = React.renderComponentToString(component);
+        } catch (_error) {
+          e = _error;
+          debug("err", e);
+        }
+        debug("create components");
+        components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, script({
+          src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js",
+          type: "text/javascript"
+        }), links, body({}, div({
+          id: "react-component",
+          dangerouslySetInnerHTML: {
+            "__html": compHtml
           }
-          if (cls.getCSS != null) {
-            links = links.concat(cls.getCSS().map(function(c) {
-              return link({
-                href: c,
-                rel: "stylesheet",
-                type: "text/css"
-              });
-            }));
+        }), scripts, script({
+          type: "text/javascript",
+          dangerouslySetInnerHTML: {
+            "__html": startupScript
           }
-          startupScript = "var app = require('app'), React = require('react'); var container = document.getElementById('react-component'); React.renderComponent(app({}), container);";
-          try {
-            debug("creating component");
-            component = cls({});
-            debug("render component html", component);
-            compHtml = React.renderComponentToString(component);
-          } catch (_error) {
-            e = _error;
-            debug("err", e);
-          }
-          debug("create components");
-          components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, links, body({}, div({
-            id: "react-component",
-            dangerouslySetInnerHTML: {
-              "__html": compHtml
-            }
-          }), scripts, script({
-            type: "text/javascript",
-            dangerouslySetInnerHTML: {
-              "__html": startupScript
-            }
-          })));
-          debug("render components");
-          str = React.renderComponentToStaticMarkup(components);
-          debug("render complete", str);
-          return res.send(str);
-        };
-      })(this));
+        })));
+        debug("render components");
+        str = React.renderComponentToStaticMarkup(components);
+        debug("render complete", str);
+        return res.send(str);
+      });
     };
 
     return ReactExpress;
