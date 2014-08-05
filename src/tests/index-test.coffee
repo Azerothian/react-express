@@ -22,7 +22,7 @@ describe 'Middle ware test', () ->
     done()
   it 'Express Test JSX', () ->
     request(host)
-      .get('/jsx/index?name=Neo')
+      .get('/jsx/index?name=Neo&lol=Morp')
       .end (err, res) ->
         expect(res.text).to.not.equal("")
         debug "done", res.text

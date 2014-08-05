@@ -1,7 +1,6 @@
 React = require "react"
 debug = require("debug")("react-express")
 url = require "url"
-parseurl = require "parseurl"
 paths = require "path"
 glob = require "glob"
 browserify = require "browserify"
@@ -14,15 +13,13 @@ rimraf = require "rimraf"
 {html, head,body,div, script, title, link} = React.DOM
 
 #todo
-#cache in session, html files based on get string
 #pass get strings as properties into the react component
-#cache javascript in a global object
 #show 500 error message for when rendercheck fails
 class ReactExpress
 
   constructor: (@options = {}) ->
-    if !@options.version?
-      @options.version = "0.11.1"
+    if !@options.reactscript?
+      @options.reactscript = "//cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js"
     if !@options.cachedir?
       @options.cachedir = "react-cache"
     @rootPath = paths.join process.cwd(), @options.basedir
@@ -50,16 +47,17 @@ class ReactExpress
   processPath: (req, res) =>
     return new Promise (resolve, reject) =>
       #url = url.parse req.originalUrl || req.url
-      url = parseurl(req)
+      debug "start"
+      uri = url.parse(req.url, true)
       #need to do better job in cleaning this
-      relative = url.pathname.replace("//", "/") #paths.normalize url.pathname
+      relative = uri.pathname.replace("//", "/") #paths.normalize url.pathname
       #if paths.sep is "\\"
       #  relative = relative.replace(/\\/g, '/');
 
       ext = paths.extname(relative)
 
       relative = relative.replace(ext, "")
-      debug "relate", relative,
+      debug "relate", relative
       #if relative.indexOf("\\") > -1
       relative = relative.replace("//", "")
       if "/" is relative
@@ -68,6 +66,7 @@ class ReactExpress
       debug "processPath : relative", relative
       debug "processPath : path", path
       pathInfo = {
+        url: uri,
         relative: relative,
         fullPath: path,
         ext: ext
@@ -139,10 +138,6 @@ class ReactExpress
         }
 
         b = browserify(bopts)
-          # dont know why this does not work?
-          # i put it before n after require still dont work
-          #.transform(literalify.configure({"react": 'window.React'}))
-
 
         debug "creating dir", cacheFileDir
         mkpath cacheFileDir, (err) ->
@@ -150,7 +145,6 @@ class ReactExpress
           b.transform(globalShim, {global: true})
           b.external("react")
           b.require(basePath, { expose: "app" })
-
 
           strm = b.bundle()
 
@@ -164,18 +158,18 @@ class ReactExpress
           #return resolve()
 
 
-  renderHtml: (pathInfo, req, res) ->
-    return new Promise (resolve, reject) ->
+  renderHtml: (pathInfo, req, res) =>
+    return new Promise (resolve, reject) =>
       debug "render html"
       res.setHeader('Content-Type', 'text/html')
 
       filePath = paths.normalize(pathInfo.fullPath)
       debug "require check for scripts?", filePath
       cls = require(filePath)
+      cls.req = req
+      cls.res = res
       scripts = [
-
         script { src: "#{pathInfo.relative}.js", type: "text/javascript" }
-        #script { src: "/app.js", type: "text/javascript" }
       ]
       links = []
       debug "cls.getScripts?"
@@ -186,21 +180,21 @@ class ReactExpress
         links = links.concat cls.getCSS().map (c) ->
           return link {href: c, rel:"stylesheet", type:"text/css" }
 
-
+      props = JSON.stringify pathInfo.url.query
       startupScript = "var app = require('app');
       var r = React;
       if(!r) {
         r = require('react');
       }
       var container = document.getElementById('react-component');
-      r.renderComponent(app({}), container);"
+      r.renderComponent(app(#{props}), container);"
 
 
       #cls.getHeadTags() if cls.getHeadTags?
       #debug "render component html"
       try
         debug "creating component"
-        component =  cls({})
+        component =  cls(pathInfo.url.query)
         debug "render component html", component
         compHtml = React.renderComponentToString component
       catch e
@@ -209,7 +203,7 @@ class ReactExpress
       components = html {},
         head {}#,
           title {}, cls.getTitle() if cls.getTitle?
-          script { src:"//cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js", type:"text/javascript" }
+          script { src:"#{@options.reactscript}", type:"text/javascript" }
           links
         body {},
           div {

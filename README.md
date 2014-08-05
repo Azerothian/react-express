@@ -1,9 +1,13 @@
 react-express
 =============
 
-Express Middleware to render react components
+Express Middleware to render the html and javascript for react components
 
 Use at your own risk, is pretty alpha atm a bit of optimising needs to happen
+
+- GET Request params passed as properties to the react control
+- Uses browserify to autogenerate the client side version of the page
+- Able to use any langauge that is supported by nodejs require and browserify tranforms via package.json/options config
 
 ## Todo App
 https://github.com/Azerothian/react-todo-express
@@ -35,7 +39,7 @@ npm install coffee-script coffeeify --save
 ```
 
 ## app.coffee
-http://js2coffee.org/ <-- for js users! :D
+[http://js2coffee.org/ <-- for js users! :D](http://js2coffee.org/)
 ```
 reactExpress = require("react-express")
 #for jsx support
@@ -58,9 +62,17 @@ app.use reactExpress(browserifyOptions)
 app.use require('serve-static')("./public")
 app.listen(port)
 ```
+## API
+
+### Options
+the options passed to the constructor is also passed to browserify for js compiling
+- reactscript: Path to react script for the browser defaults to //cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js
+- cachedir: location for compile javascript files
+- extensions: extensions for browserify to look for
+- basedir: path to the directory where you have your files
+- debug: generates sourcemaps in browserify
+
 
 ## TODO:
-* cache in session, html files based on get string
-* pass get strings as properties into the react component
-* cache javascript in a global storage
 * show 500 error message for when rendercheck fails
+- add options to ignore directories

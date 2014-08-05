@@ -1,5 +1,5 @@
 (function() {
-  var Promise, React, ReactExpress, body, browserify, debug, div, fs, glob, head, html, link, mkpath, parseurl, paths, rimraf, script, serveStatic, title, url, _ref,
+  var Promise, React, ReactExpress, body, browserify, debug, div, fs, glob, head, html, link, mkpath, paths, rimraf, script, serveStatic, title, url, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   React = require("react");
@@ -7,8 +7,6 @@
   debug = require("debug")("react-express");
 
   url = require("url");
-
-  parseurl = require("parseurl");
 
   paths = require("path");
 
@@ -31,6 +29,7 @@
   ReactExpress = (function() {
     function ReactExpress(options) {
       this.options = options != null ? options : {};
+      this.renderHtml = __bind(this.renderHtml, this);
       this.renderJs = __bind(this.renderJs, this);
       this.renderCheck = __bind(this.renderCheck, this);
       this.processPath = __bind(this.processPath, this);
@@ -72,12 +71,14 @@
     ReactExpress.prototype.processPath = function(req, res) {
       return new Promise((function(_this) {
         return function(resolve, reject) {
-          var ext, globPath, path, pathInfo, relative;
-          url = parseurl(req);
-          relative = url.pathname.replace("//", "/");
+          var ext, globPath, path, pathInfo, relative, uri;
+          debug("start");
+          uri = url.parse(req.url, true);
+          relative = uri.pathname.replace("//", "/");
           ext = paths.extname(relative);
           relative = relative.replace(ext, "");
-          debug("relate", relative, relative = relative.replace("//", ""));
+          debug("relate", relative);
+          relative = relative.replace("//", "");
           if ("/" === relative) {
             relative = "/index";
           }
@@ -85,6 +86,7 @@
           debug("processPath : relative", relative);
           debug("processPath : path", path);
           pathInfo = {
+            url: uri,
             relative: relative,
             fullPath: path,
             ext: ext
@@ -199,68 +201,71 @@
     };
 
     ReactExpress.prototype.renderHtml = function(pathInfo, req, res) {
-      return new Promise(function(resolve, reject) {
-        var cls, compHtml, component, components, e, filePath, links, scripts, startupScript, str;
-        debug("render html");
-        res.setHeader('Content-Type', 'text/html');
-        filePath = paths.normalize(pathInfo.fullPath);
-        debug("require check for scripts?", filePath);
-        cls = require(filePath);
-        scripts = [
-          script({
-            src: "" + pathInfo.relative + ".js",
-            type: "text/javascript"
-          })
-        ];
-        links = [];
-        debug("cls.getScripts?");
-        if (cls.getScripts != null) {
-          scripts = scripts.concat(cls.getScripts().map(function(s) {
-            return script({
-              src: s,
+      return new Promise((function(_this) {
+        return function(resolve, reject) {
+          var cls, compHtml, component, components, e, filePath, links, props, scripts, startupScript, str;
+          debug("render html");
+          res.setHeader('Content-Type', 'text/html');
+          filePath = paths.normalize(pathInfo.fullPath);
+          debug("require check for scripts?", filePath);
+          cls = require(filePath);
+          scripts = [
+            script({
+              src: "" + pathInfo.relative + ".js",
               type: "text/javascript"
-            });
-          }));
-        }
-        if (cls.getCSS != null) {
-          links = links.concat(cls.getCSS().map(function(c) {
-            return link({
-              href: c,
-              rel: "stylesheet",
-              type: "text/css"
-            });
-          }));
-        }
-        startupScript = "var app = require('app'); var r = React; if(!r) { r = require('react'); } var container = document.getElementById('react-component'); r.renderComponent(app({}), container);";
-        try {
-          debug("creating component");
-          component = cls({});
-          debug("render component html", component);
-          compHtml = React.renderComponentToString(component);
-        } catch (_error) {
-          e = _error;
-          debug("err", e);
-        }
-        debug("create components");
-        components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, script({
-          src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js",
-          type: "text/javascript"
-        }), links, body({}, div({
-          id: "react-component",
-          dangerouslySetInnerHTML: {
-            "__html": compHtml
+            })
+          ];
+          links = [];
+          debug("cls.getScripts?");
+          if (cls.getScripts != null) {
+            scripts = scripts.concat(cls.getScripts().map(function(s) {
+              return script({
+                src: s,
+                type: "text/javascript"
+              });
+            }));
           }
-        }), scripts, script({
-          type: "text/javascript",
-          dangerouslySetInnerHTML: {
-            "__html": startupScript
+          if (cls.getCSS != null) {
+            links = links.concat(cls.getCSS().map(function(c) {
+              return link({
+                href: c,
+                rel: "stylesheet",
+                type: "text/css"
+              });
+            }));
           }
-        })));
-        debug("render components");
-        str = React.renderComponentToStaticMarkup(components);
-        debug("render complete", str);
-        return res.send(str);
-      });
+          props = JSON.stringify(pathInfo.url.query);
+          startupScript = "var app = require('app'); var r = React; if(!r) { r = require('react'); } var container = document.getElementById('react-component'); r.renderComponent(app(" + props + "), container);";
+          try {
+            debug("creating component");
+            component = cls(pathInfo.url.query);
+            debug("render component html", component);
+            compHtml = React.renderComponentToString(component);
+          } catch (_error) {
+            e = _error;
+            debug("err", e);
+          }
+          debug("create components");
+          components = html({}, head({}), cls.getTitle != null ? title({}, cls.getTitle()) : void 0, script({
+            src: "//cdnjs.cloudflare.com/ajax/libs/react/" + _this.options.version + "/react.min.js",
+            type: "text/javascript"
+          }), links, body({}, div({
+            id: "react-component",
+            dangerouslySetInnerHTML: {
+              "__html": compHtml
+            }
+          }), scripts, script({
+            type: "text/javascript",
+            dangerouslySetInnerHTML: {
+              "__html": startupScript
+            }
+          })));
+          debug("render components");
+          str = React.renderComponentToStaticMarkup(components);
+          debug("render complete", str);
+          return res.send(str);
+        };
+      })(this));
     };
 
     return ReactExpress;

@@ -33,7 +33,7 @@
       return done();
     });
     return it('Express Test JSX', function() {
-      return request(host).get('/jsx/index?name=Neo').end(function(err, res) {
+      return request(host).get('/jsx/index?name=Neo&lol=Morp').end(function(err, res) {
         expect(res.text).to.not.equal("");
         return debug("done", res.text);
       });

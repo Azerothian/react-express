@@ -9,14 +9,11 @@ module.exports = React.createClass({
   statics: {
     getScripts: function () {
       return [
-        "/js/underscore-1.5.2.js",
-        "/js/backbone-1.1.0.js",
-        "/js/backbone.localStorage.js"
+
       ]
     },
     getCSS: function () {
       return [
-        "/css/reacttodos.css"
       ]
     }
   },
@@ -27,7 +24,7 @@ module.exports = React.createClass({
   },
 
   render: function() {
-    debug("rendering element")
+    debug("rendering element", this.props)
     return <div>Hello, {this.props.name}!</div>
   }
 })
