@@ -1,67 +1,39 @@
+express = require "express"
+
+
 Index = require "../index"
 expect = require('chai').expect
 util = require "util"
 express = require "express"
 request = require "supertest"
-debug = require("debug")("react-express:tests:index-test")
+debug = require("debug")("nodes:tests:index-test")
 require('node-jsx').install({extension: '.jsx'})
 
 
 host = "http://localhost:1337/"
 
-describe 'Middle ware test', () ->
+describe 'Middleware test', () ->
   before (done) ->
     app = express()
     port = 1337
-    app.use Index {
-      extensions: [".js", ".jsx", ".coffee", ".json"]
-      basedir: "./build/tests/react/"
-      debug: false # real expensive atm if true
+
+    data = {
+      cache: "./cache"
+      basedir: "./tests/files/"
+      routes: [{
+        name: "index"
+        alias: [ "//" ] # only works with component defined
+        component: "./tests/files/control.coffee"
+        props: { name: "Tester 123" }
+      }, {
+        # // allows localhost/array/file.html
+        files: ["./tests/files/array/*.coffee"]
+        basedir: "./tests/files/array/"
+        layout: "./tests/files/layout" #overrides using internal layout,
+      }]
     }
+
+
+    app.use Index data
     app.listen(port)
     done()
-  it 'Express Test JSX', () ->
-    request(host)
-      .get('/jsx/index?name=Neo&lol=Morp')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
-###
-  it 'Express Test JSX JS', () ->
-    request(host)
-      .get('/jsx/index.js')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
-
-
-
-
-  it 'Express Test Coffee', () ->
-    request(host)
-      .get('/coffee/index')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
-
-
-  it 'Express Test 3', () ->
-    request(host)
-      .get('/index.js')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
-  it 'Express Test Folder Constraint', () ->
-    request(host)
-      .get('/../outside/test')
-      .end (err, res) ->
-        expect(res.status).to.equal(404)
-        debug "done", res.text
-
-  it 'Express Test 2', () ->
-    request(host)
-      .get('/')
-      .end (err, res) ->
-        expect(res.text).to.not.equal("")
-        debug "done", res.text
-###

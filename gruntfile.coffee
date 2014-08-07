@@ -2,7 +2,7 @@ module.exports = (grunt) ->
 
   copyTargets = [
     { expand: true, cwd: 'src', src: ['**', '!**/*.coffee'], dest: 'build' }
-    { expand: true, cwd: 'src/tests/react/coffee', src: ['**'], dest: 'build/tests/react/coffee' }
+    { expand: true, cwd: 'src/tests/files/', src: ['**'], dest: 'build/tests/files/' }
   ]
 
   grunt.initConfig
@@ -14,7 +14,7 @@ module.exports = (grunt) ->
       build:
         [ 'build' ]
       tests:
-        [ 'build/tests/react/coffee/index.js']
+        [ 'build/tests/files/*.js']
     coffee:
       lib:
         files: [
@@ -27,7 +27,7 @@ module.exports = (grunt) ->
     watch:
       all:
         files: [
-          'Gruntfile.coffee'
+          'gruntfile.coffee'
           'src/**/*'
           'package.json'
         ]
