@@ -1,7 +1,7 @@
 express = require "express"
 
 
-Index = require "../index"
+reactexpress = require "../index"
 expect = require('chai').expect
 util = require "util"
 express = require "express"
@@ -19,21 +19,49 @@ describe 'Middleware test', () ->
 
     data = {
       cache: "./cache"
-      basedir: "./tests/files/"
-      routes: [{
-        name: "index"
-        alias: [ "//" ] # only works with component defined
-        component: "./tests/files/control.coffee"
-        props: { name: "Tester 123" }
-      }, {
-        # // allows localhost/array/file.html
-        files: ["./tests/files/array/*.coffee"]
-        basedir: "./tests/files/array/"
-        layout: "./tests/files/layout" #overrides using internal layout,
-      }]
+      basedir: "./build/tests/files/"
+      routes:
+        "//index":
+          path: "./control.coffee"
+          props: (req, res, control) ->
+            {}
+          #layout: "./layout.coffee"
+          alias: ["//"]
+        "/a/":
+          path: "./array/*.coffee"
+        "/b/":
+          path: "./**/*.coffee"
     }
 
+    reactexpress(data).then (ware) ->
+      app.use ware
+      app.listen(port)
+      done()
+  it 'Express Test', () ->
+    request(host)
+      .get('/index')
+      .end (err, res) ->
+        expect(res.text).to.not.equal("")
+        debug "done", res.text
+###
 
-    app.use Index data
-    app.listen(port)
-    done()
+
+    data = {
+      cache: "./cache"
+      basedir: "./build/tests/files/"
+      routes: [{
+        alias: [ "//", "index" ] # only works with component defined
+        path: "./control.coffee"
+        props: { name: "Tester 123" }
+      }
+      , {
+      # // allows localhost/array/file.html
+        path: "./*.coffee"
+        basedir: "./tests/files/array/"
+        layout: "./layout" #overrides using internal layout,
+        props: (control) ->
+          {}
+      }
+      ]
+    }
+###

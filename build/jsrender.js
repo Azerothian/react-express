@@ -8,7 +8,7 @@
 
   paths = require("path");
 
-  debug = require("debug")("nodes:bratify");
+  debug = require("debug")("react-express:jsrender");
 
   module.exports = jsrender = (function() {
     function jsrender(options) {

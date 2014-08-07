@@ -1,9 +1,9 @@
 (function() {
-  var Index, debug, expect, express, host, request, routerData, util;
+  var debug, expect, express, host, reactexpress, request, util;
 
   express = require("express");
 
-  Index = require("../index");
+  reactexpress = require("../index");
 
   expect = require('chai').expect;
 
@@ -21,41 +21,66 @@
 
   host = "http://localhost:1337/";
 
-  describe('Middle ware test', function() {
-    return before(function(done) {
+  describe('Middleware test', function() {
+    before(function(done) {
       var app, data, port;
       app = express();
       port = 1337;
       data = {
-        output: "./cache",
-        routes: [
-          {
-            alias: ["//index", "//"],
-            component: ["./tests/files/control.coffee"]
-          }, {
-            files: ["./tests/files/array/*.coffee"],
-            basedir: "./tests/files/",
-            layout: "./tests/files/layout"
+        cache: "./cache",
+        basedir: "./build/tests/files/",
+        routes: {
+          "//index": {
+            path: "./control.coffee",
+            props: function(req, res, control) {
+              return {};
+            },
+            alias: ["//"]
+          },
+          "/a/": {
+            path: "./array/*.coffee"
+          },
+          "/b/": {
+            path: "./**/*.coffee"
           }
-        ]
+        }
       };
-      app.use(Index(data));
-      app.listen(port);
-      return done();
+      return reactexpress(data).then(function(ware) {
+        app.use(ware);
+        app.listen(port);
+        return done();
+      });
+    });
+    return it('Express Test', function() {
+      return request(host).get('/index').end(function(err, res) {
+        expect(res.text).to.not.equal("");
+        return debug("done", res.text);
+      });
     });
   });
 
-  routerData = {
-    items: [
-      {
-        path: ["//index", "//"],
-        layout: "/files/layout.coffee",
-        control: "/files/control.coffee",
-        props: {
-          hi: "hi"
+
+  /*
+  
+  
+      data = {
+        cache: "./cache"
+        basedir: "./build/tests/files/"
+        routes: [{
+          alias: [ "//", "index" ] # only works with component defined
+          path: "./control.coffee"
+          props: { name: "Tester 123" }
         }
+        , {
+         * // allows localhost/array/file.html
+          path: "./*.coffee"
+          basedir: "./tests/files/array/"
+          layout: "./layout" #overrides using internal layout,
+          props: (control) ->
+            {}
+        }
+        ]
       }
-    ]
-  };
+   */
 
 }).call(this);

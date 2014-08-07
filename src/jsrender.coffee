@@ -2,7 +2,7 @@
 browserify = require "browserify"
 bgshim = require 'browserify-global-shim'
 paths = require "path"
-debug = require("debug")("nodes:bratify")
+debug = require("debug")("react-express:jsrender")
 
 module.exports = class jsrender
   constructor: (options) ->
