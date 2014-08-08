@@ -14,7 +14,7 @@ module.exports = (grunt) ->
       build:
         [ 'build' ]
       tests:
-        [ 'build/tests/files/*.js']
+        [ 'build/tests/files/**/*.js']
     coffee:
       lib:
         files: [

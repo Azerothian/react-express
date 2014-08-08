@@ -1,79 +1,69 @@
 (function() {
-  var bgshim, browserify, debug, jsrender, paths,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  var Promise, bgshim, browserify, debug, fs, mkdirp, paths;
 
   browserify = require("browserify");
 
   bgshim = require('browserify-global-shim');
 
-  paths = require("path");
-
   debug = require("debug")("react-express:jsrender");
 
-  module.exports = jsrender = (function() {
-    function jsrender(options) {
-      this.renderFile = __bind(this.renderFile, this);
-      this.render = __bind(this.render, this);
-      this.file = options.file, this.output = options.output, this.excludeReact = options.excludeReact, this.browserifyOptions = options.browserifyOptions, this.globalShim = options.globalShim, this.appName = options.appName;
-      if (this.browserifyOptions == null) {
-        this.browserifyOptions = {};
-      }
-      this.browserifyOptions.basedir = paths.dirname(this.file);
-      if (this.file == null) {
-        throw "no file is provided";
-      }
-      if (this.output == null) {
-        throw "no target output is provided";
-      }
-      if (this.appName == null) {
-        this.appName = "app";
-      }
-      if (this.globalShim == null) {
-        this.globalShim = {};
-      }
-      if (this.excludeReact) {
-        this.globalShim.react = 'React || React';
-      }
-    }
+  fs = require("fs");
 
-    jsrender.prototype.render = function() {
-      return new Promise((function(_this) {
-        return function(resolve, reject) {
-          var b, globalShim;
-          globalShim = bgshim.configure(_this.globalShim);
-          b = browserify(_this.browserifyOptions);
-          b.transform(globalShim, {
-            global: true
-          });
-          if (_this.excludeReact) {
-            b.external("react");
-          }
-          b.require(basePath, {
-            expose: _this.appName
-          });
-          return resolve(b.bundle());
-        };
-      })(this));
-    };
+  Promise = require("bluebird");
 
-    jsrender.prototype.renderFile = function() {
-      return new Promise((function(_this) {
-        return function(resolve, reject) {
-          return _this.render().then(function(stream) {
-            var write;
-            write = fs.createWriteStream(this.output);
-            stream.pipe(write);
-            return write.on("close", function() {
-              debug("fin");
-              return resolve();
-            });
-          });
-        };
-      })(this));
-    };
+  mkdirp = require("mkdirp");
 
-    return jsrender;
+  paths = require("path");
 
-  })();
+  module.exports = function(src, target, options) {
+    return new Promise(function(resolve, reject) {
+      var appName, b, basedir, browserifyOptions, excludeReact, globalShim, stream;
+      debug("jsrender", target);
+      if (src == null) {
+        return reject("no file is provided");
+      }
+      if (target == null) {
+        return reject("no target is provided");
+      }
+      basedir = options.basedir, excludeReact = options.excludeReact, browserifyOptions = options.browserifyOptions, globalShim = options.globalShim, appName = options.appName;
+      if (basedir == null) {
+        basedir = process.cwd();
+      }
+      if (browserifyOptions == null) {
+        browserifyOptions = {};
+      }
+      browserifyOptions.basedir = basedir;
+      if (appName == null) {
+        appName = "app";
+      }
+      if (globalShim == null) {
+        globalShim = {};
+      }
+      if (excludeReact) {
+        globalShim.react = 'React || React';
+      }
+      globalShim = bgshim.configure(globalShim);
+      b = browserify(browserifyOptions);
+      b.transform(globalShim, {
+        global: true
+      });
+      if (excludeReact) {
+        b.external("react");
+      }
+      b.require(src, {
+        expose: appName
+      });
+      stream = b.bundle();
+      return mkdirp(paths.dirname(target), function(err) {
+        var write;
+        write = fs.createWriteStream(target);
+        stream.pipe(write);
+        return write.on("close", function() {
+          debug("fin");
+          return resolve();
+        });
+      });
+    });
+  };
 
 }).call(this);

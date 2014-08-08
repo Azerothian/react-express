@@ -1,58 +1,61 @@
 
 browserify = require "browserify"
 bgshim = require 'browserify-global-shim'
-paths = require "path"
 debug = require("debug")("react-express:jsrender")
+fs = require "fs"
+Promise = require "bluebird"
+mkdirp = require "mkdirp"
+paths = require "path"
 
-module.exports = class jsrender
-  constructor: (options) ->
+
+
+module.exports = (src, target, options) ->
+  return new Promise (resolve, reject) ->
+    #todo check if file exists and reject if it does
+    debug "jsrender", target
+    #return resolve()
+    if !src?
+      return reject("no file is provided")
+    if !target?
+      return reject("no target is provided")
+
     {
-      @file,
-      @output,
-      @excludeReact,
-      @browserifyOptions,
-      @globalShim,
-      @appName
+      basedir,
+      excludeReact,
+      browserifyOptions,
+      globalShim,
+      appName
     } = options
 
-    if !@browserifyOptions?
-      @browserifyOptions = {}
+    #defaults
+    if !basedir?
+      basedir = process.cwd()
 
-    @browserifyOptions.basedir = paths.dirname(@file)
+    if !browserifyOptions?
+      browserifyOptions = {}
+    browserifyOptions.basedir = basedir
+    if !appName?
+      appName = "app"
+    if !globalShim?
+      globalShim = {}
+    if excludeReact
+      globalShim.react = 'React || React'
 
+    globalShim = bgshim.configure globalShim
+    b = browserify(browserifyOptions)
 
-    if !@file?
-      throw "no file is provided"
+    b.transform globalShim, { global: true }
 
-    if !@output?
-      throw "no target output is provided"
+    if excludeReact
+      b.external("react")
 
-    if !@appName?
-      @appName = "app"
-    if !@globalShim?
-      @globalShim = {}
-    if @excludeReact
-      @globalShim.react = 'React || React'
+    b.require(src, { expose: appName })
 
-
-  render: () =>
-    return new Promise (resolve, reject) =>
-      globalShim = bgshim.configure @globalShim
-      b = browserify(@browserifyOptions)
-
-      b.transform globalShim, { global: true }
-
-      if @excludeReact
-        b.external("react")
-
-      b.require(basePath, { expose: @appName })
-      resolve b.bundle()
-
-  renderFile: () =>
-    return new Promise (resolve, reject) =>
-      @render().then (stream) ->
-        write = fs.createWriteStream(@output)
-        stream.pipe(write)
-        write.on "close", () ->
-          debug "fin"
-          resolve()
+    stream = b.bundle()
+    
+    mkdirp paths.dirname(target), (err) ->
+      write = fs.createWriteStream(target)
+      stream.pipe(write)
+      write.on "close", () ->
+        debug "fin"
+        resolve()

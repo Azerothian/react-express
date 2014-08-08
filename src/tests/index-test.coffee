@@ -33,8 +33,8 @@ describe 'Middleware test', () ->
           path: "./**/*.coffee"
     }
 
-    reactexpress(data).then (ware) ->
-      app.use ware
+    reactexpress(data).then (middleware) ->
+      app.use middleware
       app.listen(port)
       done()
   it 'Express Test', () ->

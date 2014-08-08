@@ -45,8 +45,8 @@
           }
         }
       };
-      return reactexpress(data).then(function(ware) {
-        app.use(ware);
+      return reactexpress(data).then(function(middleware) {
+        app.use(middleware);
         app.listen(port);
         return done();
       });
