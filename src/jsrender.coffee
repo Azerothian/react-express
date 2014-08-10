@@ -38,21 +38,19 @@ module.exports = (src, target, options) ->
       appName = "app"
     if !globalShim?
       globalShim = {}
-    if excludeReact
-      globalShim.react = 'React || React'
 
-    globalShim = bgshim.configure globalShim
     b = browserify(browserifyOptions)
-
-    b.transform globalShim, { global: true }
-
     if excludeReact
+      debug "excluding react"
+      globalShim.react = 'React || React'
+      globalShim = bgshim.configure globalShim
+      b.transform globalShim, { global: true }
       b.external("react")
 
     b.require(src, { expose: appName })
 
     stream = b.bundle()
-    
+
     mkdirp paths.dirname(target), (err) ->
       write = fs.createWriteStream(target)
       stream.pipe(write)

@@ -9,15 +9,9 @@
 
   util = require("util");
 
-  express = require("express");
-
   request = require("supertest");
 
-  debug = require("debug")("nodes:tests:index-test");
-
-  require('node-jsx').install({
-    extension: '.jsx'
-  });
+  debug = require("debug")("react-express:tests:index-test");
 
   host = "http://localhost:1337/";
 
@@ -30,12 +24,15 @@
         cache: "./cache",
         basedir: "./build/tests/files/",
         routes: {
-          "//index": {
+          "/index": {
             path: "./control.coffee",
             props: function(req, res, control) {
-              return {};
+              return {
+                hi: "hi",
+                name: "cowboy"
+              };
             },
-            alias: ["//"]
+            alias: ["/"]
           },
           "/a/": {
             path: "./array/*.coffee"

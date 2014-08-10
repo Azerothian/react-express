@@ -1,13 +1,9 @@
 express = require "express"
-
-
 reactexpress = require "../index"
 expect = require('chai').expect
 util = require "util"
-express = require "express"
 request = require "supertest"
-debug = require("debug")("nodes:tests:index-test")
-require('node-jsx').install({extension: '.jsx'})
+debug = require("debug")("react-express:tests:index-test")
 
 
 host = "http://localhost:1337/"
@@ -21,12 +17,15 @@ describe 'Middleware test', () ->
       cache: "./cache"
       basedir: "./build/tests/files/"
       routes:
-        "//index":
+        "/index":
           path: "./control.coffee"
           props: (req, res, control) ->
-            {}
+            {
+              hi: "hi"
+              name: "cowboy"
+            }
           #layout: "./layout.coffee"
-          alias: ["//"]
+          alias: ["/"]
         "/a/":
           path: "./array/*.coffee"
         "/b/":
@@ -37,6 +36,7 @@ describe 'Middleware test', () ->
       app.use middleware
       app.listen(port)
       done()
+
   it 'Express Test', () ->
     request(host)
       .get('/index')

@@ -20,6 +20,9 @@
       startup = "var app = require('" + this.props.appName + "'); var r = React; if(!r) { r = require('react'); } var container = document.getElementById('react-component'); r.renderComponent(app(" + compProps + "), container);";
       return html({}, head({}, this.props.title != null ? title({}, this.props.title != null) : void 0, this.props.links.map(function(l) {
         return link(l);
+      }), script({
+        src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.min.js",
+        type: "text/javacript"
       })), body({}, div({
         id: "react-component",
         dangerouslySetInnerHTML: {

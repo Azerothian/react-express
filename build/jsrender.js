@@ -39,15 +39,14 @@
       if (globalShim == null) {
         globalShim = {};
       }
-      if (excludeReact) {
-        globalShim.react = 'React || React';
-      }
-      globalShim = bgshim.configure(globalShim);
       b = browserify(browserifyOptions);
-      b.transform(globalShim, {
-        global: true
-      });
       if (excludeReact) {
+        debug("excluding react");
+        globalShim.react = 'React || React';
+        globalShim = bgshim.configure(globalShim);
+        b.transform(globalShim, {
+          global: true
+        });
         b.external("react");
       }
       b.require(src, {

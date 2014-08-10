@@ -10,9 +10,11 @@ debug = require("debug")("react-express:index")
 serveStatic = require "serve-static"
 rimraf = require "rimraf"
 glob = require "glob"
+React = require "react"
 
 isGlob = (str) ->
   return str.indexOf("*") > -1
+
 
 # todo
 # create view component
@@ -35,6 +37,7 @@ class ReactExpress
       .then @generateJavascript
       .then @generateRoutes
       .then () =>
+        debug "cache directory", @cacheDir
         @staticCache = serveStatic(@cacheDir)
         resolve()
       , reject
@@ -42,9 +45,7 @@ class ReactExpress
 
   generateJavascript: () =>
     return new Promise (resolve, reject) =>
-
       @js = {}
-
       globPath = "#{@filesDir}/**/*.*"
 
       glob globPath, (err, files) =>
@@ -55,30 +56,16 @@ class ReactExpress
         promises = []
         debug "@filesDir", @filesDir
         for file in files
-          #paths paths.resolve(file) to make replace work on win32
-
-
-#
-#          cleanFile = paths.resolve(file)
-#          dirName = paths.dirname(cleanFile)
-#          dir = paths.relative(@filesDir, dirName)
-#          debug "dirname", dirName
-#
-#          fileCacheDir = paths.join @cacheDir, dir
-#          name = paths.basename(cleanFile, paths.extname(cleanFile))
-#          out = "#{fileCacheDir}#{paths.sep}#{name}.js"
-
           relative = paths.relative(@filesDir, file)
           debug "relative", relative
           p = paths.join @cacheDir, relative
           dir = paths.dirname(p)
           name = paths.basename(relative, paths.extname(relative))
           out = paths.join dir, "#{name}.js"
-
           @js[relative] = out
 
           promises.push jsrender(file, out, {
-            basedir: @filesDir,
+            basedir: @filesDir
             excludeReact: true
           })
 
@@ -105,24 +92,36 @@ class ReactExpress
           for file in files
             fileExt = paths.extname(file)
             relative = paths.relative(@filesDir, file)
-            routePath = url.resolve(routeName, relative)
-            promises.push @createRoute(routePath.replace(fileExt, ""), route, relative)
+            routePath = url.resolve(routeName, relative).replace(fileExt, "")
+            promises.push @createRoute(routePath, relative, file, route)
           return Promise.all(promises).then resolve, reject
       else
         relativePath = paths.relative(@filesDir, controlPath)
-        @createRoute(routeName, route, relativePath)
+        @createRoute(routeName,relativePath,controlPath, route)
         .then resolve, reject
 
-  createRoute: (routePath, route, filePath) =>
+  createRoute: (routePath, filePath,controlPath, route) =>
     return new Promise (resolve, reject) =>
+      cleanPath = routePath.replace(/\\/g, "/")
       jsFile = @getJsFileSync(filePath)
-      debug "routePath", routePath, jsFile
+      debug "routePath", cleanPath, jsFile
+      newRoute = {
+        control: controlPath
+        compile: jsFile
+        props: route.props if route.props?
+      }
+
+      @routes[cleanPath] = newRoute
+      if route.alias?
+        for a in route.alias
+          @routes[a] = newRoute
       return resolve()
 
   getJsFileSync: (path) =>
     if !@js[path]?
       debug "file was not found ", path, @js
-    return @js[path]
+    rel = paths.relative(@cacheDir, @js[path]).replace(/\\/g, "/")
+    return rel
 
 
   clearCache: () =>
@@ -136,15 +135,50 @@ class ReactExpress
           resolve()
 
   express: (req, res, next) =>
-    uri = url.parse(req.url, true)
-    for route in @routes
-      if route is uri.pathname
-        debug "route to render html"
-        return next()
-    @staticCache(res,res,next)
+    uri = url.parse req.url, true
+    debug "url pathname", uri.pathname
+    for route of @routes
+      if "#{route}" is uri.pathname
+        return @generateHtml route, @routes[route], req, res, next
+    debug "forwarding to cache"
+    @staticCache(req,res,next)
 
+  generateHtml: (routeName, route, req, res, next) =>
+    #return next()
 
+    res.setHeader('Content-Type', 'text/html')
+    cls = require(route.control)
+    scripts = [ {src: route.compile, type: "text/javascript"} ]
+    links = []
+    debug "cls.getScripts?"
+    if cls.getScripts?
+      scripts = scripts.concat cls.getScripts()
+    if cls.getCSS?
+      links = links.concat cls.getCSS()
 
+    componentProps = {}
+    componentProps = route.props(req, res, cls) if route.props?
+
+    try
+      debug "creating component"
+      component =  cls(componentProps)
+      debug "render component html", component
+      componentHtml = React.renderComponentToString component
+    catch e
+      debug "err", e
+
+    p = {
+      title: ""
+      scripts: scripts
+      links: links
+      html: componentHtml
+      componentProps: route.props(cls, req, res) if route.props?
+    }
+
+    layout = require("./layout")(p)
+    html = React.renderComponentToStaticMarkup layout
+    debug "render complete"
+    res.send html
 
 
 

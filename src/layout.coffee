@@ -29,6 +29,7 @@ module.exports = React.createClass {
         title {}, @props.title? if @props.title?
         @props.links.map (l) ->
           link l
+        script {src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.min.js", type: "text/javacript"}
       body {},
         div {
           id: "react-component",

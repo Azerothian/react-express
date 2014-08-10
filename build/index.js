@@ -1,5 +1,5 @@
 (function() {
-  var Promise, ReactExpress, baseLayout, debug, fs, glob, isGlob, jsrender, paths, rimraf, serveStatic, url,
+  var Promise, React, ReactExpress, baseLayout, debug, fs, glob, isGlob, jsrender, paths, rimraf, serveStatic, url,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   jsrender = require("./jsrender");
@@ -22,6 +22,8 @@
 
   glob = require("glob");
 
+  React = require("react");
+
   isGlob = function(str) {
     return str.indexOf("*") > -1;
   };
@@ -38,6 +40,7 @@
 
   ReactExpress = (function() {
     function ReactExpress() {
+      this.generateHtml = __bind(this.generateHtml, this);
       this.express = __bind(this.express, this);
       this.clearCache = __bind(this.clearCache, this);
       this.getJsFileSync = __bind(this.getJsFileSync, this);
@@ -55,6 +58,7 @@
           _this.cacheDir = paths.join(process.cwd(), _this.options.cache);
           _this.filesDir = paths.join(process.cwd(), _this.options.basedir);
           return Promise.resolve().then(_this.clearCache).then(_this.generateJavascript).then(_this.generateRoutes).then(function() {
+            debug("cache directory", _this.cacheDir);
             _this.staticCache = serveStatic(_this.cacheDir);
             return resolve();
           }, reject);
@@ -127,35 +131,51 @@
                 file = files[_i];
                 fileExt = paths.extname(file);
                 relative = paths.relative(_this.filesDir, file);
-                routePath = url.resolve(routeName, relative);
-                promises.push(_this.createRoute(routePath.replace(fileExt, ""), route, relative));
+                routePath = url.resolve(routeName, relative).replace(fileExt, "");
+                promises.push(_this.createRoute(routePath, relative, file, route));
               }
               return Promise.all(promises).then(resolve, reject);
             });
           } else {
             relativePath = paths.relative(_this.filesDir, controlPath);
-            return _this.createRoute(routeName, route, relativePath).then(resolve, reject);
+            return _this.createRoute(routeName, relativePath, controlPath, route).then(resolve, reject);
           }
         };
       })(this));
     };
 
-    ReactExpress.prototype.createRoute = function(routePath, route, filePath) {
+    ReactExpress.prototype.createRoute = function(routePath, filePath, controlPath, route) {
       return new Promise((function(_this) {
         return function(resolve, reject) {
-          var jsFile;
+          var a, cleanPath, jsFile, newRoute, _i, _len, _ref;
+          cleanPath = routePath.replace(/\\/g, "/");
           jsFile = _this.getJsFileSync(filePath);
-          debug("routePath", routePath, jsFile);
+          debug("routePath", cleanPath, jsFile);
+          newRoute = {
+            control: controlPath,
+            compile: jsFile,
+            props: route.props != null ? route.props : void 0
+          };
+          _this.routes[cleanPath] = newRoute;
+          if (route.alias != null) {
+            _ref = route.alias;
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              a = _ref[_i];
+              _this.routes[a] = newRoute;
+            }
+          }
           return resolve();
         };
       })(this));
     };
 
     ReactExpress.prototype.getJsFileSync = function(path) {
+      var rel;
       if (this.js[path] == null) {
         debug("file was not found ", path, this.js);
       }
-      return this.js[path];
+      rel = paths.relative(this.cacheDir, this.js[path]).replace(/\\/g, "/");
+      return rel;
     };
 
     ReactExpress.prototype.clearCache = function() {
@@ -176,17 +196,60 @@
     };
 
     ReactExpress.prototype.express = function(req, res, next) {
-      var route, uri, _i, _len, _ref;
+      var route, uri;
       uri = url.parse(req.url, true);
-      _ref = this.routes;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        route = _ref[_i];
-        if (route === uri.pathname) {
-          debug("route to render html");
-          return next();
+      debug("url pathname", uri.pathname);
+      for (route in this.routes) {
+        if (("" + route) === uri.pathname) {
+          return this.generateHtml(route, this.routes[route], req, res, next);
         }
       }
-      return this.staticCache(res, res, next);
+      debug("forwarding to cache");
+      return this.staticCache(req, res, next);
+    };
+
+    ReactExpress.prototype.generateHtml = function(routeName, route, req, res, next) {
+      var cls, component, componentHtml, componentProps, e, html, layout, links, p, scripts;
+      res.setHeader('Content-Type', 'text/html');
+      cls = require(route.control);
+      scripts = [
+        {
+          src: route.compile,
+          type: "text/javascript"
+        }
+      ];
+      links = [];
+      debug("cls.getScripts?");
+      if (cls.getScripts != null) {
+        scripts = scripts.concat(cls.getScripts());
+      }
+      if (cls.getCSS != null) {
+        links = links.concat(cls.getCSS());
+      }
+      componentProps = {};
+      if (route.props != null) {
+        componentProps = route.props(req, res, cls);
+      }
+      try {
+        debug("creating component");
+        component = cls(componentProps);
+        debug("render component html", component);
+        componentHtml = React.renderComponentToString(component);
+      } catch (_error) {
+        e = _error;
+        debug("err", e);
+      }
+      p = {
+        title: "",
+        scripts: scripts,
+        links: links,
+        html: componentHtml,
+        componentProps: route.props != null ? route.props(cls, req, res) : void 0
+      };
+      layout = require("./layout")(p);
+      html = React.renderComponentToStaticMarkup(layout);
+      debug("render complete");
+      return res.send(html);
     };
 
     return ReactExpress;
