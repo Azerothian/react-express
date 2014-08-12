@@ -24,7 +24,7 @@ module.exports = (opts) ->
   return new Promise (resolve, reject) ->
     reactRoute = new ReactExpress()
     return reactRoute.init(opts).then () ->
-      resolve(reactRoute.express)
+      resolve(reactRoute)
     , reject
 
 class ReactExpress
@@ -73,11 +73,13 @@ class ReactExpress
 
   generateRoutes: () =>
     return new Promise (resolve, reject) =>
-      @routes = {}
-      promises = []
-      for rname of @options.routes
-        promises.push @generateRouteFromRule(rname, @options.routes[rname])
-      Promise.all(promises).then resolve, reject
+      if @options.routes?
+        @routes = {}
+        promises = []
+        for rname of @options.routes
+          promises.push @generateRouteFromRule(rname, @options.routes[rname])
+        return Promise.all(promises).then resolve, reject
+      return resolve()
 
 
   generateRouteFromRule: (routeName, route) =>
@@ -134,7 +136,7 @@ class ReactExpress
           debug "clear cache success"
           resolve()
 
-  express: (req, res, next) =>
+  router: (req, res, next) =>
     uri = url.parse req.url, true
     debug "url pathname", uri.pathname
     for route of @routes

@@ -37,6 +37,6 @@ data = {
         }
 }
 
-reactexpress(data).then (middleware) ->
-  app.use middleware
+reactexpress(data).then (rex) ->
+  app.use rex.router
   app.listen(port)
