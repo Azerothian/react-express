@@ -11,9 +11,6 @@ paths = require "path"
 
 module.exports = (src, target, options) ->
   return new Promise (resolve, reject) ->
-    #todo check if file exists and reject if it does
-    debug "jsrender", target
-    #return resolve()
     if !src?
       return reject("no file is provided")
     if !target?
@@ -50,10 +47,13 @@ module.exports = (src, target, options) ->
     b.require(src, { expose: appName })
 
     stream = b.bundle()
-
-    mkdirp paths.dirname(target), (err) ->
+    dirTarget = "#{paths.dirname(target)}/"
+    debug "mkdirp", dirTarget
+    mkdirp dirTarget, () ->
       write = fs.createWriteStream(target)
+      debug "write stream created"
       stream.pipe(write)
+      debug "piped"
       write.on "close", () ->
         debug "fin"
         resolve()

@@ -1,6 +1,4 @@
 React = require "react"
-
-
 {html, head, body, div, script, title, link} = React.DOM
 
 module.exports = React.createClass {
@@ -29,7 +27,7 @@ module.exports = React.createClass {
         title {}, @props.title? if @props.title?
         @props.links.map (l) ->
           link l
-        script {src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.min.js", type: "text/javacript"}
+        script {src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.min.js", type: "text/javascript"}
       body {},
         div {
           id: "react-component",

@@ -1,10 +1,12 @@
+paths = require "path"
 express = require "express"
 reactexpress = require "../index"
 expect = require('chai').expect
 util = require "util"
 request = require "supertest"
 debug = require("debug")("react-express:tests:index-test")
-
+require("coffee-script").register()
+require('node-jsx').install({extension: '.jsx'})
 
 host = "http://localhost:1337/"
 
@@ -15,34 +17,35 @@ describe 'Middleware test', () ->
 
     data = {
       cache: "./cache"
-      basedir: "./build/tests/files/"
-      routes:
-        "/index":
-          path: "./control.coffee"
-          props: (req, res, control) ->
-            {
-              hi: "hi"
-              name: "cowboy"
-            }
-          #layout: "./layout.coffee"
-          alias: ["/"]
-        "/a/":
-          path: "./array/*.coffee"
-        "/b/":
-          path: "./**/*.coffee"
+      dir: "./build/tests/views/"
+
     }
 
-    reactexpress(data).then (middleware) ->
-      app.use middleware
+    reactexpress(data).then (rex) ->
+
+      app.set 'view engine', 'coffee'
+      app.engine "coffee", rex.viewEngine
+      #app.engine "jsx", rex.viewEngine
+      app.set "views", paths.join process.cwd(), data.dir
+      app.get "/", (req, res, next) ->
+        debug "calling RENDER"
+        res.render "control", { name: "ansma" }
+      app.use rex.cache
       app.listen(port)
       done()
 
   it 'Express Test', () ->
     request(host)
-      .get('/index')
+      .get('')
       .end (err, res) ->
         expect(res.text).to.not.equal("")
-        debug "done", res.text
+        debug "html test", res.text
+  it 'Express Test js', () ->
+    request(host)
+      .get('control.js')
+      .end (err, res) ->
+        expect(res.text).to.not.equal("")
+        debug "js test", res.text
 ###
 
 

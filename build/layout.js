@@ -22,7 +22,7 @@
         return link(l);
       }), script({
         src: "//cdnjs.cloudflare.com/ajax/libs/react/0.11.0/react.min.js",
-        type: "text/javacript"
+        type: "text/javascript"
       })), body({}, div({
         id: "react-component",
         dangerouslySetInnerHTML: {

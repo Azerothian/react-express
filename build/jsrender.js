@@ -17,8 +17,7 @@
 
   module.exports = function(src, target, options) {
     return new Promise(function(resolve, reject) {
-      var appName, b, basedir, browserifyOptions, excludeReact, globalShim, stream;
-      debug("jsrender", target);
+      var appName, b, basedir, browserifyOptions, dirTarget, excludeReact, globalShim, stream;
       if (src == null) {
         return reject("no file is provided");
       }
@@ -53,10 +52,14 @@
         expose: appName
       });
       stream = b.bundle();
-      return mkdirp(paths.dirname(target), function(err) {
+      dirTarget = "" + (paths.dirname(target)) + "/";
+      debug("mkdirp", dirTarget);
+      return mkdirp(dirTarget, function() {
         var write;
         write = fs.createWriteStream(target);
+        debug("write stream created");
         stream.pipe(write);
+        debug("piped");
         return write.on("close", function() {
           debug("fin");
           return resolve();

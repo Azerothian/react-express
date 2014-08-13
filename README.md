@@ -1,7 +1,7 @@
 react-express
 =============
 
-Express Middleware to render the html and javascript for react components
+Express view component to render the html and javascript for react components
 
 Use at your own risk, is pretty alpha atm a bit of optimising needs to happen
 
@@ -41,26 +41,40 @@ npm install coffee-script coffeeify --save
 ## app.coffee
 [http://js2coffee.org/ <-- for js users! :D](http://js2coffee.org/)
 ```
-reactExpress = require("react-express")
 #for jsx support
 require('node-jsx').install({extension: '.jsx'})
 #for coffee support
 require("coffee-script").register()
 
-serveStatic = require('serve-static')
-
+paths = require "path"
 express = require "express"
+
+reactexpress = require "reactexpress"
+require("coffee-script").register()
+require('node-jsx').install({extension: '.jsx'})
+
 app = express()
 port = 1337
-browserifyOptions = {
-  extensions: [".js", ".json", ".jsx", ".coffee"]
-  basedir: "./public/"
-  debug: false # real expensive atm if true
+
+data = {
+  cache: "./cache"
+  dir: "./views/"
 }
 
-app.use reactExpress(browserifyOptions)
-app.use require('serve-static')("./public")
-app.listen(port)
+reactexpress(data).then (rex) ->
+
+  #app.set 'view engine', 'coffee'
+  app.engine "coffee", rex.viewEngine
+  app.engine "jsx", rex.viewEngine
+
+  #app.set "views", paths.join process.cwd(), data.dir
+  app.get "/", (req, res, next) ->
+    res.render "control.coffee", { name: "ansma" }
+  app.get "/jsx", (req, res, next) ->
+    res.render "jsxtest.jsx", { name: "jsxs" }
+  app.use rex.cache
+  app.listen(port)
+
 ```
 ## API
 
