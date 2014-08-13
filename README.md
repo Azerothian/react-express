@@ -5,9 +5,9 @@ Express view component to render the html and javascript for react components
 
 Use at your own risk, is pretty alpha atm a bit of optimising needs to happen
 
-- GET Request params passed as properties to the react control
+- properties passed to render command will be applied to client and server rendering  
 - Uses browserify to autogenerate the client side version of the page
-- Able to use any langauge that is supported by nodejs require and browserify tranforms via package.json/options config
+- Able to use any language that is supported by nodejs require and browserify transforms via package.json/options config
 
 ## Todo App
 https://github.com/Azerothian/react-todo-express
@@ -49,7 +49,7 @@ require("coffee-script").register()
 paths = require "path"
 express = require "express"
 
-reactexpress = require "reactexpress"
+reactexpress = require "react-express"
 require("coffee-script").register()
 require('node-jsx').install({extension: '.jsx'})
 
@@ -80,13 +80,6 @@ reactexpress(data).then (rex) ->
 
 ### Options
 the options passed to the constructor is also passed to browserify for js compiling
-- reactscript: Path to react script for the browser defaults to //cdnjs.cloudflare.com/ajax/libs/react/0.11.1/react.min.js
 - cachedir: location for compile javascript files
-- extensions: extensions for browserify to look for
 - basedir: path to the directory where you have your files
-- debug: generates sourcemaps in browserify
-
-
-## TODO:
-* show 500 error message for when rendercheck fails
-- add options to ignore directories
+- browserifyOptions: options passed to browserify
