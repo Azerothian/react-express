@@ -44,6 +44,7 @@ module.exports = (src, target, options) ->
       b.transform globalShim, { global: true }
       b.external("react")
 
+    debug "expose name:", appName
     b.require(src, { expose: appName })
 
     stream = b.bundle()
