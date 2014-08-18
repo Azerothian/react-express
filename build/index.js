@@ -1,5 +1,5 @@
 (function() {
-  var Promise, React, ReactExpress, debug, defaultOptions, glob, helper, jsrender, layout, paths, serveStatic,
+  var Promise, React, ReactExpress, debug, defaultOptions, glob, helper, jsrender, layout, paths, serveStatic, slash,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   Promise = require("bluebird");
@@ -11,6 +11,8 @@
   glob = require("glob");
 
   React = require("react");
+
+  slash = require("slash");
 
   debug = require("debug")("react-express:index");
 
@@ -79,6 +81,7 @@
             promises = [];
             for (_i = 0, _len = files.length; _i < _len; _i++) {
               file = files[_i];
+              file = slash(file);
               r = paths.relative(_this.filesDir, file);
               dir = paths.dirname(r);
               name = paths.basename(file, paths.extname(file));
@@ -104,6 +107,8 @@
       return new Promise((function(_this) {
         return function(resolve, reject) {
           var cls, component, componentHtml, e, html, l, links, p, rel, scripts;
+          debug("filename: ", filename);
+          filename = slash(filename);
           if (_this.jsfiles[filename] == null) {
             debug("compiled file not found!");
             throw "compiled file not found!";

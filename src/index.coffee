@@ -4,7 +4,7 @@ serveStatic = require "serve-static"
 
 glob = require "glob"
 React = require "react"
-
+slash = require "slash"
 debug = require("debug")("react-express:index")
 
 helper = require "./helper"
@@ -50,11 +50,14 @@ class ReactExpress
       globPath = paths.join @filesDir, @options.filter
       debug "globpath", globPath
       glob globPath, (err, files) =>
+
         if err?
           debug "generateJavascript: glob failed", err, globPath
           return reject(err)
+
         promises = []
         for file in files
+          file = slash(file)
           r = paths.relative @filesDir, file
           dir = paths.dirname(r)
           name = paths.basename(file, paths.extname(file))
@@ -75,6 +78,8 @@ class ReactExpress
 
   renderHtml: (filename, props) =>
     return new Promise (resolve, reject) =>
+      debug "filename: ", filename
+      filename = slash(filename)
       if !@jsfiles[filename]?
         debug "compiled file not found!"
         throw "compiled file not found!"

@@ -48,6 +48,7 @@
         });
         b.external("react");
       }
+      debug("expose name:", appName);
       b.require(src, {
         expose: appName
       });
