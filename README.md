@@ -30,17 +30,17 @@ npm install coffee-script coffeeify --save
 
 ### package.json
 ### jsx support
-```
+```json
 "browserify": { "transform": [ "reactify" ] }
 ```
 ### coffee support
-```
+```json
 "browserify": { "transform": [ "coffeeify" ] }
 ```
 
 ## app.coffee
 [http://js2coffee.org/ <-- for js users! :D](http://js2coffee.org/)
-```
+```coffeescript
 #for jsx support
 require('node-jsx').install({extension: '.jsx'})
 #for coffee support
